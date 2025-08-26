@@ -339,7 +339,7 @@
             background: var(--bg-input);
             border: 2px solid var(--glass-border);
             border-radius: 20px;
-            padding: 25px 30px;
+            padding: 25px 70px 25px 30px; /* Increased right padding for mic button */
             font-size: 1.2rem;
             font-family: 'Poppins', sans-serif;
             color: var(--text-primary);
@@ -362,6 +362,44 @@
             color: var(--text-muted);
             font-style: italic;
         }
+
+        /* --- NEW: Microphone Button Styling --- */
+        .mic-btn {
+            position: absolute;
+            top: 25px;
+            right: 25px;
+            width: 40px;
+            height: 40px;
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            color: var(--text-secondary);
+        }
+
+        .mic-btn:hover {
+            background-color: var(--glass-bg);
+            border-color: var(--accent-glow);
+            color: var(--accent-glow);
+        }
+
+        .mic-btn.listening {
+            border-color: var(--primary-glow);
+            color: var(--primary-glow);
+            animation: pulse-mic 1.5s infinite;
+        }
+
+        @keyframes pulse-mic {
+            0% { box-shadow: 0 0 0 0 rgba(255, 0, 110, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(255, 0, 110, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 0, 110, 0); }
+        }
+        /* --- END: Microphone Button Styling --- */
+
 
         /* Animated Submit Button */
         .submit-container {
@@ -705,11 +743,16 @@
             }
             
             .input-field {
-                padding: 20px 25px;
+                padding: 20px 60px 20px 25px; /* Adjust padding for mic button on mobile */
                 min-height: 120px;
                 font-size: 1.1rem;
             }
             
+            .mic-btn {
+                top: 20px;
+                right: 15px;
+            }
+
             .submit-btn {
                 padding: 18px 40px;
                 font-size: 1.2rem;
@@ -787,11 +830,18 @@
                                 <textarea 
                                     id="naturalQuery" 
                                     class="input-field" 
-                                    placeholder="Ask me anything about your data... For example: 'Show me all students with grades above 85' or 'How many users registered last month?'"
+                                    placeholder="Ask me anything... or click the mic to speak."
                                     required
                                     rows="4"
                                 ></textarea>
-                            </div>
+                                <button type="button" id="micBtn" class="mic-btn" title="Start/Stop Listening">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                                        <line x1="12" y1="19" x2="12" y2="22"></line>
+                                    </svg>
+                                </button>
+                                </div>
                         </div>
                         
                         <div class="submit-container">
@@ -804,7 +854,6 @@
 
                     <div id="resultsSection" class="results-section">
                         <div class="results-grid">
-                            <!-- Card 1: Query Results (Table) -->
                             <div class="result-card" id="resultsCard">
                                 <div class="result-header">
                                     <div class="result-icon">
@@ -817,7 +866,6 @@
                                 </div>
                             </div>
                             
-                            <!-- Card 2: Generated SQL -->
                             <div class="result-card" id="sqlCard">
                                 <div class="result-header">
                                     <div class="result-icon">
@@ -833,7 +881,6 @@
                                 </div>
                             </div>
                             
-                            <!-- Card 3: AI Explanation -->
                             <div class="result-card" id="explanationCard">
                                 <div class="result-header">
                                     <div class="result-icon">
@@ -911,6 +958,67 @@
             const resultsCard = document.getElementById('resultsCard');
             const sqlCard = document.getElementById('sqlCard');
             const explanationCard = document.getElementById('explanationCard');
+            const naturalQueryTextarea = document.getElementById('naturalQuery');
+
+            // --- NEW: Speech Recognition Setup ---
+            const micBtn = document.getElementById('micBtn');
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            let recognition;
+
+            if (SpeechRecognition) {
+                recognition = new SpeechRecognition();
+                recognition.continuous = true;
+                recognition.lang = 'en-US';
+
+                let isListening = false;
+                let finalTranscript = '';
+
+                micBtn.addEventListener('click', () => {
+                    if (isListening) {
+                        recognition.stop();
+                    } else {
+                        finalTranscript = naturalQueryTextarea.value; // Start with existing text
+                        recognition.start();
+                    }
+                });
+
+                recognition.onstart = () => {
+                    isListening = true;
+                    micBtn.classList.add('listening');
+                    naturalQueryTextarea.placeholder = 'Listening...';
+                };
+
+                recognition.onend = () => {
+                    isListening = false;
+                    micBtn.classList.remove('listening');
+                    naturalQueryTextarea.placeholder = "Ask me anything... or click the mic to speak.";
+                };
+
+                recognition.onerror = (event) => {
+                    console.error('Speech recognition error:', event.error);
+                    if (event.error === 'not-allowed') {
+                        alert('Microphone access was denied. Please allow microphone access in your browser settings.');
+                    }
+                };
+
+                recognition.onresult = (event) => {
+                    let interimTranscript = '';
+                    for (let i = event.resultIndex; i < event.results.length; ++i) {
+                        if (event.results[i].isFinal) {
+                            finalTranscript += event.results[i][0].transcript + ' ';
+                        } else {
+                            interimTranscript += event.results[i][0].transcript;
+                        }
+                    }
+                    naturalQueryTextarea.value = finalTranscript + interimTranscript;
+                };
+
+            } else {
+                console.warn('Speech Recognition not supported in this browser.');
+                micBtn.style.display = 'none'; // Hide mic button if not supported
+            }
+            // --- END: Speech Recognition Setup ---
+
 
             const setLoadingState = (isLoading) => {
                 submitBtn.disabled = isLoading;
@@ -992,7 +1100,7 @@
             
             queryForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                const naturalQuery = document.getElementById('naturalQuery').value;
+                const naturalQuery = naturalQueryTextarea.value; // Use the textarea directly
                 if (!naturalQuery.trim()) return;
 
                 setLoadingState(true);
