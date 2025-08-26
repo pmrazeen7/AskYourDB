@@ -304,7 +304,7 @@
 
         /* Input Section */
         .input-section {
-            margin-bottom: 40px;
+            margin-bottom: 10px; /* Reduced to make space for suggestions */
         }
 
         .input-label {
@@ -331,7 +331,7 @@
 
         .input-wrapper {
             position: relative;
-            margin-bottom: 30px;
+            margin-bottom: 15px; /* Adjusted margin */
         }
 
         .input-field {
@@ -339,7 +339,7 @@
             background: var(--bg-input);
             border: 2px solid var(--glass-border);
             border-radius: 20px;
-            padding: 25px 70px 25px 30px; /* Increased right padding for mic button */
+            padding: 25px 70px 25px 30px;
             font-size: 1.2rem;
             font-family: 'Poppins', sans-serif;
             color: var(--text-primary);
@@ -363,7 +363,6 @@
             font-style: italic;
         }
 
-        /* --- NEW: Microphone Button Styling --- */
         .mic-btn {
             position: absolute;
             top: 25px;
@@ -398,9 +397,37 @@
             70% { box-shadow: 0 0 0 10px rgba(255, 0, 110, 0); }
             100% { box-shadow: 0 0 0 0 rgba(255, 0, 110, 0); }
         }
-        /* --- END: Microphone Button Styling --- */
-
-
+        
+        /* --- NEW: CSS for Suggested Queries --- */
+        .suggestions-container {
+            text-align: center;
+            padding-bottom: 30px;
+        }
+        .suggestions-title {
+            font-weight: 400;
+            color: var(--text-secondary);
+            margin-bottom: 15px;
+            font-size: 1rem;
+        }
+        .suggestion-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            color: var(--text-secondary);
+            padding: 8px 16px;
+            margin: 5px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-family: 'Poppins', sans-serif;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+        .suggestion-btn:hover {
+            background: rgba(255, 0, 110, 0.2);
+            border-color: var(--primary-glow);
+            color: var(--text-primary);
+            transform: translateY(-2px);
+        }
+        
         /* Animated Submit Button */
         .submit-container {
             text-align: center;
@@ -841,7 +868,18 @@
                                         <line x1="12" y1="19" x2="12" y2="22"></line>
                                     </svg>
                                 </button>
+                            </div>
+
+                            <div class="suggestions-container">
+                                <div class="suggestions-title">Don't know where to start? Try one of these:</div>
+                                <div>
+                                    <button type="button" class="suggestion-btn">How many users signed up last month?</button>
+                                    <button type="button" class="suggestion-btn">What are the top 5 most sold products?</button>
+                                    <button type="button" class="suggestion-btn">Show total revenue by country</button>
+                                    <button type="button" class="suggestion-btn">List all customers from Bengaluru</button>
                                 </div>
+                            </div>
+
                         </div>
                         
                         <div class="submit-container">
@@ -955,12 +993,19 @@
             const btnText = document.getElementById('btnText');
             const resultsSection = document.getElementById('resultsSection');
             const errorMessageDiv = document.getElementById('errorMessage');
-            const resultsCard = document.getElementById('resultsCard');
-            const sqlCard = document.getElementById('sqlCard');
-            const explanationCard = document.getElementById('explanationCard');
             const naturalQueryTextarea = document.getElementById('naturalQuery');
 
-            // --- NEW: Speech Recognition Setup ---
+            // --- NEW: JavaScript for Suggested Queries ---
+            const suggestionButtons = document.querySelectorAll('.suggestion-btn');
+            suggestionButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const queryText = button.textContent;
+                    naturalQueryTextarea.value = queryText;
+                    naturalQueryTextarea.focus();
+                });
+            });
+            
+            // --- Speech Recognition Setup ---
             const micBtn = document.getElementById('micBtn');
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             let recognition;
@@ -977,7 +1022,7 @@
                     if (isListening) {
                         recognition.stop();
                     } else {
-                        finalTranscript = naturalQueryTextarea.value; // Start with existing text
+                        finalTranscript = naturalQueryTextarea.value;
                         recognition.start();
                     }
                 });
@@ -1015,10 +1060,8 @@
 
             } else {
                 console.warn('Speech Recognition not supported in this browser.');
-                micBtn.style.display = 'none'; // Hide mic button if not supported
+                micBtn.style.display = 'none';
             }
-            // --- END: Speech Recognition Setup ---
-
 
             const setLoadingState = (isLoading) => {
                 submitBtn.disabled = isLoading;
@@ -1027,23 +1070,60 @@
             };
 
             const displayResults = (data) => {
-                // --- Logic to show/hide cards based on response type ---
+                errorMessageDiv.style.display = 'none'; // Hide previous errors
+                resultsSection.innerHTML = `
+                    <div class="results-grid">
+                        <div class="result-card" id="resultsCard">
+                            <div class="result-header">
+                                <div class="result-icon">
+                                    <svg width="24" height="24" fill="white" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                                </div>
+                                <div class="result-title">Query Results</div>
+                            </div>
+                            <div class="result-content">
+                                <div class="query-results-container" id="queryResultsContainer"></div>
+                            </div>
+                        </div>
+                        <div class="result-card" id="sqlCard">
+                            <div class="result-header">
+                                <div class="result-icon">
+                                    <svg width="24" height="24" fill="white" viewBox="0 0 24 24"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg>
+                                </div>
+                                <div class="result-title">Generated SQL</div>
+                            </div>
+                            <div class="result-content">
+                                <div class="sql-display">
+                                    <button class="copy-btn" onclick="copyToClipboard('sqlQueryResult')">📋 Copy</button>
+                                    <code id="sqlQueryResult"></code>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="result-card" id="explanationCard">
+                            <div class="result-header">
+                                <div class="result-icon">
+                                    <svg width="24" height="24" fill="white" viewBox="0 0 24 24"><path d="M21 6h-2v9H6v2c0 .55.45 1 1 1h11l4 4V7c0-.55-.45-1-1-1zm-4 6V3c0-.55-.45-1-1-1H3c-.55 0-1 .45-1 1v14l4-4h11c.55 0 1-.45 1-1z"/></svg>
+                                </div>
+                                <div class="result-title">AI Explanation</div>
+                            </div>
+                            <div class="result-content">
+                                <div class="natural-response" id="naturalResponse"></div>
+                            </div>
+                        </div>
+                    </div>`;
+
                 if (data.is_chat) {
-                    // This is a conversational response
-                    resultsCard.style.display = 'none';
-                    sqlCard.style.display = 'none';
-                    explanationCard.style.display = 'block';
+                    document.getElementById('resultsCard').style.display = 'none';
+                    document.getElementById('sqlCard').style.display = 'none';
+                    document.getElementById('explanationCard').style.display = 'block';
                     document.getElementById('naturalResponse').textContent = data.explanation || 'I can help with that.';
                 } else {
-                    // This is a SQL query response
-                    resultsCard.style.display = 'block';
-                    sqlCard.style.display = 'block';
-                    explanationCard.style.display = 'block';
+                    document.getElementById('resultsCard').style.display = 'block';
+                    document.getElementById('sqlCard').style.display = 'block';
+                    document.getElementById('explanationCard').style.display = 'block';
                     document.getElementById('sqlQueryResult').textContent = data.sql || '-- Not available --';
                     document.getElementById('naturalResponse').textContent = data.explanation || '-- No explanation --';
                     
                     const resultsContainer = document.getElementById('queryResultsContainer');
-                    resultsContainer.innerHTML = '';
                     const resultData = data.results;
 
                     if (resultData && resultData.headers && resultData.rows && resultData.rows.length > 0) {
@@ -1071,12 +1151,13 @@
                         table.appendChild(tbody);
                         resultsContainer.appendChild(table);
                     } else {
-                        resultsContainer.innerHTML = `<div class="no-results-message">No results found.</div>`;
+                        resultsContainer.innerHTML = `<div class="no-results-message">Query executed, but no results were returned.</div>`;
                     }
                 }
             };
 
             const displayError = (message) => {
+                resultsSection.innerHTML = ''; // Clear any previous results
                 errorMessageDiv.textContent = `Error: ${message}`;
                 errorMessageDiv.style.display = 'block';
             };
@@ -1100,7 +1181,7 @@
             
             queryForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                const naturalQuery = naturalQueryTextarea.value; // Use the textarea directly
+                const naturalQuery = naturalQueryTextarea.value;
                 if (!naturalQuery.trim()) return;
 
                 setLoadingState(true);
