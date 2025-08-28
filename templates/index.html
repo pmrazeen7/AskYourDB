@@ -204,7 +204,7 @@
     </div>
 
     <script>
-        const API_BASE_URL = "http://127.0.0.1:5000";
+        const API_BASE_URL = ""; // An empty string makes the browser use the current domain
 
         class ParticleSystem {
             constructor() { this.container = document.getElementById('particleContainer'); if (!this.container) return; this.particles = []; this.colors = ['#ff006e', '#8338ec', '#3a86ff', '#06ffa5', '#ffbe0b']; this.maxParticles = 50; }
