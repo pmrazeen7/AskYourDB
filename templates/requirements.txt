@@ -1,0 +1,8 @@
+Flask
+Flask-Cors
+python-dotenv
+langchain-google-genai
+langchain-experimental
+SQLAlchemy
+PyMySQL
+gunicorn
